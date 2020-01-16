@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 from zerotier import client as ztclient
 import json
 import sys
@@ -38,6 +36,9 @@ def main():
     # add new member to the network and authorize
     network['config'].update({'authorized': True})
     client.network.updateMember(network, args.new_member_id, network['id'])
+
+def cli() -> None:
+    return main()
 
 if __name__ == "__main__":
     main()

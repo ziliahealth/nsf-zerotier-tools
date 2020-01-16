@@ -1,0 +1,10 @@
+requests
+ipython
+mypy
+pytest
+click
+zerotier
+# Required by zerotier. It is used by the restapi client
+# module but hasn't been included in the `install_requires`.
+python-dateutil
+-c constraints.txt
