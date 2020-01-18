@@ -90,18 +90,21 @@ class ZeroTierClient:
             name: Optional[str] = None,
             description: Optional[str] = None,
     ) -> Dict[str, Any]:
-        cfg_fields_diff = dict()
+        cfg_fields_diff: Dict[str, Any] = dict()
         if authorized is not None:
             cfg_fields_diff.update({'authorized': authorized})
 
-        fields_diff = dict()
+        fields_diff: Dict[str, Any] = dict()
+        if cfg_fields_diff:
+            fields_diff.update({'config': cfg_fields_diff})
         if name is not None:
             fields_diff.update({'name': name})
         if description is not None:
             fields_diff.update({'description': description})
 
 
-        member_json = self._get_member_json(network_id, member_id)
+        # member_json = self._get_member_json(network_id, member_id)
+        member_json = dict()
         member_json.update(fields_diff)
         member_json['config'].update(cfg_fields_diff)
         response = self._client.network.updateMember(
