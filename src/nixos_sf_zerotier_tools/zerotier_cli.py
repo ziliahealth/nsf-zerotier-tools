@@ -4,7 +4,9 @@ from dataclasses import dataclass
 import click
 import logging
 import datetime
-from .zerotier import ZeroTierClient, compute_human_readable_last_seen_str
+import warnings
+import sys
+from .zerotier import ZtClient, ZtNetworkService, compute_human_readable_last_seen_str
 
 LOGGER = logging.getLogger(__name__)
 
@@ -12,9 +14,13 @@ LOGGER = logging.getLogger(__name__)
 @dataclass
 class CliContext:
     """Click cli app context."""
+    client: ZtClient
 
-    client: ZeroTierClient
 
+@dataclass
+class CliNetworkContext:
+    """Click cli app network group context."""
+    network: ZtNetworkService
 
 
 def composed(*decs):
@@ -75,17 +81,19 @@ def setup_verbose(
         level=verbosity_mapping.get(verbose, logging.DEBUG))
 
 
-def setup_shared_options(
+def setup_shared_network_options(
         verbose: int,
-        api_token: str
-) -> CliContext:
+        api_token: str,
+        network_id: str
+) -> CliNetworkContext:
     setup_verbose(verbose)
 
     # create client and set the authentication header
-    client = ZeroTierClient(api_token)
+    client = ZtClient(api_token)
+    network = client.get_network_service(network_id)
 
-    return CliContext(
-        client=client)
+    return CliNetworkContext(
+        network=network)
 
 
 @click.group()
@@ -133,9 +141,10 @@ def ls(
 
     # IDEA: Sort by last-seen flag.
 
-    obj = setup_shared_options(verbose, api_token)
-    client = obj.client
-    members = client.get_network_members(network_id)
+    obj = setup_shared_network_options(
+        verbose, api_token, network_id)
+    network = obj.network
+    members = network.get_network_members()
 
     for m in members:
         last_seen_str = compute_human_readable_last_seen_str(
@@ -160,6 +169,20 @@ def ls(
             last_seen_str, m.physical_ip, m.description))
 
 
+class InsufficientPriviledgesWarning(UserWarning):
+    pass
+
+
+def simply_format_warning(
+        message: str, category, filename, lineno, file=None, line=None):
+    if file is None:
+        file = sys.stderr
+
+    # category.__name__
+    print("WARNING: {}".format(message),
+        file=file)
+
+
 @member.command()
 @network_member_shared_options
 @click.option(
@@ -179,10 +202,27 @@ def authorize(
         description: Optional[str]
 ) -> None:
     """Authorize Zerotier network member to the network."""
-    obj = setup_shared_options(verbose, api_token)
-    client = obj.client
-    client.update_network_member(
-        network_id, member_id,
+    obj = setup_shared_network_options(
+        verbose, api_token, network_id)
+
+    network = obj.network
+
+    with warnings.catch_warnings():
+        warnings.showwarning = simply_format_warning
+        if not network.permissions.modify and name is not None:
+            warnings.warn(InsufficientPriviledgesWarning(
+                "Insufficient privileges to 'modify' network member 'name' field. "
+                "Proceding with member authorization."))
+            name = None
+
+        if not network.permissions.modify and description is not None:
+            warnings.warn(InsufficientPriviledgesWarning(
+                "Insufficient privileges to 'modify' network member 'description' field. "
+                "Proceding with member authorization."))
+            description = None
+
+    network.update_member(
+        member_id,
         authorized=True,
         name=name,
         description=description)
@@ -199,10 +239,11 @@ def deauthorize(
     """Deauthorize Zerotier network member from the network."""
 
     # IDEA: Support deauth by short name at some point.
-    obj = setup_shared_options(verbose, api_token)
-    client = obj.client
-    client.update_network_member(
-        network_id, member_id,
+    obj = setup_shared_network_options(
+        verbose, api_token, network_id)
+    network = obj.network
+    network.update_member(
+        member_id,
         authorized=False)
 
 
@@ -231,11 +272,11 @@ def modify(
         description: Optional[str]
 ) -> None:
     """Edit Zerotier network member information."""
-    obj = setup_shared_options(verbose, api_token)
-    client = obj.client
-    assert authorized is None
-    client.update_network_member(
-        network_id, member_id,
+    obj = setup_shared_network_options(
+        verbose, api_token, network_id)
+    network = obj.network
+    network.update_member(
+        member_id,
         authorized=authorized,
         name=name,
         description=description)

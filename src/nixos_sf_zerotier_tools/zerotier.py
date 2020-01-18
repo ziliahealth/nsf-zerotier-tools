@@ -3,10 +3,9 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from zerotier import client as ztclient
 
-
 @dataclass(frozen=True)
 class ZtNetworkMemberEntry:
-    """Zero tier network member."""
+    """Zerotier network member."""
     authorized: bool
     member_id: str
     name: str
@@ -17,11 +16,112 @@ class ZtNetworkMemberEntry:
     description: str
 
 
-class ZeroTierClient:
+@dataclass(frozen=True)
+class ZtNetworkPermissions:
+    """Zerotier network permissions."""
+    read: bool
+    authorize: bool
+    modify: bool
+    delete: bool
+
+
+@dataclass(frozen=True)
+class ZtNetworkEntry:
+    id: str
+    current_user_permissions: ZtNetworkPermissions
+
+
+@dataclass(frozen=True)
+class ZtUserEntry:
+    id: str
+    email: str
+
+
+@dataclass(frozen=True)
+class ZtStatusEntry:
+    current_user: ZtUserEntry
+    version: str
+    api_version: int
+
+
+class ZtClient:
     """Zerotier app specific client."""
     def __init__(self, api_token: str) -> None:
         self._client = ztclient.Client()
         self._client.set_auth_header("Bearer " + api_token)
+        self._status = self.get_status()
+
+    def _get_self_json(self) -> Dict[str, Any]:
+        # This is broken when using token auth.
+        response = self._client.self.getAuthenticatedUser()
+        response_json = response.json()
+        # assert "Network" == response_json["type"]
+        return response_json
+
+    def _get_status_json(self) -> Dict[str, Any]:
+        response = self._client.status.getStatus()
+        response_json = response.json()
+        assert "CentralStatus" == response_json["type"]
+        return response_json
+
+    def get_status(self) -> ZtStatusEntry:
+        status_json = self._get_status_json()
+
+        current_user_json = status_json["user"]
+        assert "User" == current_user_json["type"]
+
+        current_user = ZtUserEntry(
+            id=current_user_json["id"],
+            email=current_user_json["email"]
+        )
+
+        status = ZtStatusEntry(
+            current_user=current_user,
+            version=status_json["version"],
+            api_version=status_json["apiVersion"],
+        )
+        return status
+
+    def _get_network_json(self, network_id: str) -> Dict[str, Any]:
+        response = self._client.network.getNetwork(network_id)
+        response_json = response.json()
+        assert "Network" == response_json["type"]
+        return response_json
+
+    def get_network(self, network_id: str) -> ZtNetworkEntry:
+        network_json = self._get_network_json(network_id)
+        current_user_id = self._status.current_user.id
+        current_user_perm_json = network_json["permissions"][current_user_id]
+
+        current_user_perm = ZtNetworkPermissions(
+            read=current_user_perm_json["r"],
+            authorize=current_user_perm_json["a"],
+            modify=current_user_perm_json["m"],
+            delete=current_user_perm_json["d"]
+        )
+        return ZtNetworkEntry(
+            id=network_json["id"],
+            current_user_permissions=current_user_perm
+        )
+
+    def get_network_service(self, network_id: str) -> 'ZtNetworkService':
+        network = self.get_network(network_id)
+        return ZtNetworkService(self._client.network, network)
+
+
+class ZtNetworkService:
+    def __init__(
+            self,
+            service: ztclient.NetworkService,
+            network_entry: ZtNetworkEntry
+    ) -> None:
+        self._service = service
+        self._network_entry = network_entry
+        self._id = network_entry.id
+
+    @property
+    def permissions(self):
+        return self._network_entry.current_user_permissions
 
     @staticmethod
     def _make_datetime_from_api_timestamp(
@@ -30,10 +130,8 @@ class ZeroTierClient:
             float(timestamp_msec_since_epoch / 1000))
 
     def _get_network_members_json(
-            self, network_id: str) -> List[Dict[str, Any]]:
-        client = self._client
-        network = client.network.getNetwork(network_id).json()
-        members = client.network.listMembers(network['id']).json()
+            self) -> List[Dict[str, Any]]:
+        members = self._service.listMembers(self._id).json()
         return members
 
     @classmethod
@@ -59,9 +157,9 @@ class ZeroTierClient:
         )
 
     def get_network_members(
-            self, network_id: str
+            self
     ) -> List[ZtNetworkMemberEntry]:
-        members_json = self._get_network_members_json(network_id)
+        members_json = self._get_network_members_json()
 
         out = []
         for m in members_json:
@@ -71,21 +169,22 @@ class ZeroTierClient:
         return out
 
     def _get_member_json(
-            self, network_id: str, member_id: str
+            self, member_id: str
     ) -> Dict[str, Any]:
-        response = self._client.network.getMember(member_id, network_id)
+        response = self._service.getMember(member_id, self._id)
         response_json = response.json()
         assert "Member" == response_json["type"]
         return response_json
 
     def get_member(
-            self, network_id: str, member_id: str
+            self, member_id: str
     ) -> ZtNetworkMemberEntry:
-        member_json = self._get_member_json(network_id, member_id)
+        member_json = self._get_member_json(member_id)
         return self._make_network_member_from_json(member_json)
 
     def _update_network_member_json(
-            self, network_id: str, member_id: str,
+            self,
+            member_id: str,
             authorized: Optional[bool] = None,
             name: Optional[str] = None,
             description: Optional[str] = None,
@@ -107,25 +206,27 @@ class ZeroTierClient:
         member_json = dict()
         member_json.update(fields_diff)
         member_json['config'].update(cfg_fields_diff)
-        response = self._client.network.updateMember(
-            member_json, member_id, network_id)
+        response = self._service.updateMember(
+            member_json, member_id, self._id)
         response_json = response.json()
         assert "Member" == response_json["type"]
         return response_json
 
-    def update_network_member(
-            self, network_id: str, member_id: str,
+    def update_member(
+            self,
+            member_id: str,
             authorized: Optional[bool] = None,
             name: Optional[str] = None,
             description: Optional[str] = None,
     ) -> ZtNetworkMemberEntry:
         member_json = self._update_network_member_json(
-            network_id, member_id,
+            member_id,
             authorized,
             name,
             description)
 
         return self._make_network_member_from_json(member_json)
+
 
 
 def compute_last_seen(
