@@ -118,4 +118,10 @@ $ ./update_nix_requirements.sh
 Both `requirements.nix` and `requirements_frozen.txt` should have been updated.
 
 
+Contributing
+------------
+
+Contributing implies licensing those contributions under the terms of [LICENSE](./LICENSE), which is an *Apache 2.0* license.
+
+
 [nixos-secure-factory]: https://github.com/jraygauthier/nixos-secure-factory
