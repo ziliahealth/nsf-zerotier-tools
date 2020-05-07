@@ -71,7 +71,7 @@ Building and running
 --------------------
 
 ```bash
-$ nix build -f release.nix
+$ nix build -f release.nix default
 # ..
 $ ./result/bin/nixos-sf-zerotier --help
 # TODO: Helper output here
