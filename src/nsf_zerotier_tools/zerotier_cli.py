@@ -37,13 +37,13 @@ def _get_network_shared_options():
             '-v', '--verbose', default=0, count=True,
             help="Verbosity level."),
         click.option(
-            '--api-token', envvar='NIXOS_SF_ZEROTIER_API_TOKEN',
+            '--api-token', envvar='NSF_ZEROTIER_API_TOKEN',
             prompt=True, hide_input=True,
             help=(
                 "Zerotier api access token as can be "
                 "managed from <https://my.zerotier.com/> *Account* tab.")),
         click.option(
-            '--network-id', envvar='NIXOS_SF_ZEROTIER_NETWORK_ID',
+            '--network-id', envvar='NSF_ZEROTIER_NETWORK_ID',
             prompt=True,
             help=(
                 "Network id as can be obtained "
@@ -60,7 +60,7 @@ def network_member_shared_options(func):
     options = _get_network_shared_options()
     options.extend([
         click.option(
-            '--member-id', envvar='NIXOS_SF_ZEROTIER_MEMBER_ID',
+            '--member-id', envvar='NSF_ZEROTIER_MEMBER_ID',
             prompt=True,
             help=(
                 "Network member id as output (3rd field) when calling "
