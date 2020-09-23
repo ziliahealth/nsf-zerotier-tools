@@ -11,7 +11,7 @@ let
   };
 
   app = appPython.mkDerivation rec {
-    pname = "nixos-sf-zerotier-tools";
+    pname = "nsf-zerotier-tools";
     version = "0.0.0";
     name = "${pname}-${version}";
     src = nix-gitignore.gitignoreSourcePure ./.gitignore ./.;
@@ -32,7 +32,7 @@ let
     # dontUseSetuptoolsShellHook = true;
 
     postInstall = ''
-      click_exes=( "nixos-sf-zerotier" )
+      click_exes=( "nsf-zerotier" )
 
       # Install click application bash completions.
       bash_completion_dir="$out/share/bash-completion/completions"

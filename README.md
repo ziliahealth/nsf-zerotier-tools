@@ -13,7 +13,7 @@ Features
     description:
 
     ```bash
-    $ nixos-sf-zerotier network member authorize --name "my-device-short-name" --description "My description."
+    $ nsf-zerotier network member authorize --name "my-device-short-name" --description "My description."
     Api token:
     Network id: 23958b0631e6f452
     Member id: 1b76419d42
@@ -31,7 +31,7 @@ Features
  -  Listing network members:
 
     ```bash
-    $ nixos-sf-zerotier network member ls
+    $ nsf-zerotier network member ls
     Api token:
     Network id: 23958b0631e6f452
     auth: True, id: 1b76419d42, ip: ['172.25.172.34'], name: "my-device-short-name", last-seen: "ONLINE", phys-ip: 24.37.197.186, desc: "My description."
@@ -43,7 +43,7 @@ Features
  -  Deauthorize a device from a zerotier network:
 
     ```bash
-    $ nixos-sf-zerotier network member deauthorize
+    $ nsf-zerotier network member deauthorize
     Api token:
     Network id: 23958b0631e6f452
     Member id: 1b76419d42
@@ -53,7 +53,7 @@ Features
  -  Listing network members filtered by online status and name:
 
     ```bash
-    $ nixos-sf-zerotier network member ls --online --name "my-device"
+    $ nsf-zerotier network member ls --online --name "my-device"
     Api token:
     Network id: 23958b0631e6f452
     auth: False, id: 1b76419d42, ip: [], name: "my-device-short-name", last-seen: "ONLINE", phys-ip: 24.37.197.186, desc: "My description."
@@ -73,7 +73,7 @@ Building and running
 ```bash
 $ nix build -f release.nix default
 # ..
-$ ./result/bin/nixos-sf-zerotier --help
+$ ./result/bin/nsf-zerotier --help
 # TODO: Helper output here
 ```
 
@@ -88,9 +88,9 @@ shell completions (bash / zsh / etc).
 ```bash
 $ nix-shell env.nix
 # ..
-$ nixos-sf-zerotier --help
+$ nsf-zerotier --help
 # .. (same as above)
-$ nixos-sf-zerotier [Hit Tab Here]
+$ nsf-zerotier [Hit Tab Here]
 ```
 
 
@@ -102,7 +102,7 @@ $ cd /this/directory
 # ..
 $ nix-shell
 # ..
-$ nixos-sf-zerotier --help
+$ nsf-zerotier --help
 # .. (same as above)
 ```
 
