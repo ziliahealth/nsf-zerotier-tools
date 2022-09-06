@@ -107,17 +107,6 @@ $ nsf-zerotier --help
 ```
 
 
-Updating the dependencies
--------------------------
-
-```bash
-$ ./update_nix_requirements.sh
-# ..
-```
-
-Both `requirements.nix` and `requirements_frozen.txt` should have been updated.
-
-
 Contributing
 ------------
 
